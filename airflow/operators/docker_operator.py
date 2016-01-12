@@ -167,7 +167,8 @@ class DockerOperator(BaseOperator):
             if exit_code != 0:
                 raise AirflowException('docker container failed')
 
-            return self.cli.logs(container=self.container['Id']) if self.xcom_all else str(line.strip())
+            if self.xcom_push:
+                return self.cli.logs(container=self.container['Id']) if self.xcom_all else str(line.strip())
 
     def on_kill(self):
         if self.cli is not None:
