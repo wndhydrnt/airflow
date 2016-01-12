@@ -3,6 +3,7 @@ import logging
 from airflow.models import BaseOperator
 from airflow.utils import apply_defaults, AirflowException, TemporaryDirectory
 from docker import Client, tls
+import ast
 
 
 class DockerOperator(BaseOperator):
@@ -16,7 +17,7 @@ class DockerOperator(BaseOperator):
     :param image: Docker image from which to create the container.
     :type image: str
     :param api_version: Remote API version.
-    :type api_version: float
+    :type api_version: str
     :param command: Command to be run in the container.
     :type command: str or list
     :param cpus: Number of CPUs to assign to the container.
@@ -59,10 +60,9 @@ class DockerOperator(BaseOperator):
     :param xcom_all: Push all the stdout or just the last line. The default is False (last line).
     :type xcom_all: bool
     """
-
     template_fields = ('command',)
     template_ext = ('.sh', '.bash',)
-    
+
     @apply_defaults
     def __init__(
             self,
@@ -83,12 +83,14 @@ class DockerOperator(BaseOperator):
             tmp_dir='/tmp/airflow',
             user=None,
             volumes=None,
-            xcom_push=True,
+            xcom_push=False,
             xcom_all=False,
             *args,
             **kwargs):
 
         super(DockerOperator, self).__init__(*args, **kwargs)
+        self.xcom_push = xcom_push
+        self.xcom_all = xcom_all
         self.api_version = api_version
         self.command = command
         self.cpus = cpus
@@ -106,8 +108,6 @@ class DockerOperator(BaseOperator):
         self.tmp_dir = tmp_dir
         self.user = user
         self.volumes = volumes or []
-        self.xcom_push = xcom_push
-        self.xcom_push = xcom_all
 
         self.cli = None
         self.container = None
@@ -118,11 +118,11 @@ class DockerOperator(BaseOperator):
         tls_config = None
         if self.tls_ca_cert and self.tls_client_cert and self.tls_client_key:
             tls_config = tls.TLSConfig(
-                ca_cert=self.tls_ca_cert,
-                client_cert=(self.tls_client_cert, self.tls_client_key),
-                verify=True,
-                ssl_version=self.tls_ssl_version,
-                assert_hostname=self.tls_hostname
+                    ca_cert=self.tls_ca_cert,
+                    client_cert=(self.tls_client_cert, self.tls_client_key),
+                    verify=True,
+                    ssl_version=self.tls_ssl_version,
+                    assert_hostname=self.tls_hostname
             )
             self.docker_url = self.docker_url.replace('tcp://', 'https://')
 
@@ -145,16 +145,17 @@ class DockerOperator(BaseOperator):
             self.environment['AIRFLOW_TMP_DIR'] = self.tmp_dir
             self.volumes.append('{0}:{1}'.format(host_tmp_dir, self.tmp_dir))
 
-            logging.info('command: ' + self.command)
+            commands = ast.literal_eval(self.command) if self.command.strip().find('[') == 0 else self.command
+
             self.container = self.cli.create_container(
-                command=self.command,
-                cpu_shares=cpu_shares,
-                environment=self.environment,
-                host_config=self.cli.create_host_config(binds=self.volumes,
-                                                        network_mode=self.network_mode),
-                image=image,
-                mem_limit=self.mem_limit,
-                user=self.user
+                    command=commands,
+                    cpu_shares=cpu_shares,
+                    environment=self.environment,
+                    host_config=self.cli.create_host_config(binds=self.volumes,
+                                                            network_mode=self.network_mode),
+                    image=image,
+                    mem_limit=self.mem_limit,
+                    user=self.user
             )
             self.cli.start(self.container['Id'])
 
@@ -166,10 +167,7 @@ class DockerOperator(BaseOperator):
             if exit_code != 0:
                 raise AirflowException('docker container failed')
 
-            logging.info("self.xcom_push: " + str(self.xcom_push))
-            if self.xcom_push:
-                return self.cli.logs(container=self.container['Id']) if self.xcom_all else str(line.strip())
-
+            return self.cli.logs(container=self.container['Id']) if self.xcom_all else str(line.strip())
 
     def on_kill(self):
         if self.cli is not None:
