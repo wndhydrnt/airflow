@@ -55,13 +55,7 @@ t_is_data_available = ShortCircuitOperator(
         python_callable=is_data_available,
         dag=dag)
 
-# ==========================================================	
-
-mv_templated_cmd = """   
-    "sleep 30"
-    "mv {{params.source_location}}/{{ ti.xcom_pull('view_file') }} {{params.target_location}}"
-    "echo '{{params.target_location}}/{{ ti.xcom_pull('view_file') }}'"
-"""
+# ==========================================================
 
 t_move = DockerOperator(
         api_version='1.19',
