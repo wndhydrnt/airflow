@@ -19,7 +19,7 @@ from airflow.www import app as application
 from airflow.settings import Session
 from lxml import html
 
-NUM_EXAMPLE_DAGS = 7
+NUM_EXAMPLE_DAGS = 9
 DEV_NULL = '/dev/null'
 DEFAULT_DATE = datetime(2015, 1, 1)
 DEFAULT_DATE_ISO = DEFAULT_DATE.isoformat()
