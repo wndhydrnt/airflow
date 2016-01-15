@@ -145,7 +145,10 @@ class DockerOperator(BaseOperator):
             self.environment['AIRFLOW_TMP_DIR'] = self.tmp_dir
             self.volumes.append('{0}:{1}'.format(host_tmp_dir, self.tmp_dir))
 
-            commands = ast.literal_eval(self.command) if self.command.strip().find('[') == 0 else self.command
+            if self.command is not None and self.command.strip().find('[') == 0:
+                commands = ast.literal_eval(self.command)
+            else:
+                commands = self.command
 
             self.container = self.cli.create_container(
                     command=commands,
