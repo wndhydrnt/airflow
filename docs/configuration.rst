@@ -51,8 +51,8 @@ As Airflow was built to interact with its metadata using the great SqlAlchemy
 library, you should be able to use any database backend supported as a
 SqlAlchemy backend. We recommend using **MySQL** or **Postgres**.
 
-.. note:: We rely on more strict ANSI SQL settings for MySQL in order to have 
-   sane defaults. Make sure to have specified `explicit_defaults_for_timestamp=1` 
+.. note:: We rely on more strict ANSI SQL settings for MySQL in order to have
+   sane defaults. Make sure to have specified `explicit_defaults_for_timestamp=1`
    in your my.cnf under `[mysqld]`
 
 .. note:: If you decide to use **Postgres**, we recommend using the ``psycopg2``
@@ -317,3 +317,15 @@ the test configuration, set test_mode in airflow.cfg:
 Due to Airflow's automatic environment variable expansion (see :ref:`setting-options`),
 you can also set the env var ``AIRFLOW__CORE__UNIT_TEST_MODE`` to temporarily overwrite
 airflow.cfg.
+
+Running behind a Reverse Proxy
+''''''''''''''''''''''''''''''
+
+Airflow Webserver can run behind a reverse proxy.
+The reverse proxy should be configured to sent some headers to Airflow as described in the
+documentation of Flask `here <http://flask.pocoo.org/docs/latest/deploying/wsgi-standalone/#proxy-setups>`_.
+
+If the reverse proxy is running on a different server than the Airflow Webserver process and terminates SSL/TLS,
+be sure to set the environment variable ``FORWARDED_ALLOW_IPS`` in the environment of the Airflow webserver process.
+Information on the possible values of ``FORWARDED_ALLOW_IPS`` can be found in documentation of gunicorn
+`here <http://docs.gunicorn.org/en/stable/settings.html#forwarded-allow-ips>`_.
